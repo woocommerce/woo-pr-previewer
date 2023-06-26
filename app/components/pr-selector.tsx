@@ -1,9 +1,5 @@
 import { PrForm } from "./client/pr-form";
 
-const env = process.env;
-const HOST =
-  env.VERCEL && env.VERCEL_URL ? env.VERCEL_URL : "http://localhost:3000";
-
 export const PrSelector = ({
   organization,
   repo,
@@ -23,7 +19,6 @@ export const PrSelector = ({
           repo={repo}
           workflowName={workflowName}
           artifactName={artifactName}
-          host={HOST}
         />
       </div>
     </main>

@@ -24,18 +24,17 @@ export const PrForm = ({
   repo,
   workflowName,
   artifactName,
-  host,
 }: {
   organization: string;
   repo: string;
   workflowName: string;
   artifactName: string;
-  host: string;
 }) => {
   const [isSubmitting, setIsSubmitting] = useState<Boolean>(false);
   const [submitResponse, setSubmitResponse] = useState<
     PrSubmitResponse | undefined
   >();
+  const host = window.location.origin;
   const onSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setIsSubmitting(true);
