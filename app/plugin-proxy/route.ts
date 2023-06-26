@@ -18,7 +18,11 @@ if (!GITHUB_TOKEN) {
   );
 }
 
-const gitHubRequest = async (url: string) => {
+const gitHubRequest = async (
+  url: string,
+  asJson = true,
+  isArtifactRequest = false
+) => {
   const headers = {
     "User-Agent":
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.132 Safari/537.36",
@@ -26,9 +30,13 @@ const gitHubRequest = async (url: string) => {
   };
   const res = await fetch(url, { headers });
   if (!res.ok) {
-    throw new Error("GitHub API request failed");
+    if (isArtifactRequest && res.status === 410) {
+      throw new Error("Artifact has expired");
+    } else {
+      throw new Error("GitHub API request failed");
+    }
   }
-  const body = await res.json();
+  const body = asJson ? await res.json() : res;
   return {
     body,
     headers: res.headers,
@@ -50,7 +58,7 @@ const streamFromGitHubPR = async ({
     throw new Error("Invalid PR Number");
   }
   const { body: ciRuns } = await gitHubRequest(
-    `https://api.github.com/repos/${organization}/${repo}/actions/runs?branch=${branchName}`
+    `https://api.github.com/repos/${organization}/${repo}/actions/runs?branch=${prDetails.head.ref}`
   );
   if (!ciRuns?.workflow_runs?.length) {
     throw new Error("No CI runs found for this branch");
@@ -97,16 +105,18 @@ const streamFromGitHubPR = async ({
     "cache-control",
   ];
   let headers: Record<string, string> = {};
-  const { body: artifact } = await gitHubRequest(zipUrl);
-  for (const header_line of artifact.headers) {
-    const headerName = header_line
-      .substring(0, header_line.indexOf(":"))
-      .toLowerCase();
-    if (allowedHeaders.includes(headerName)) {
-      headers[headerName] = header_line;
+  const { body: artifactZip, headers: artifactHeaders } = await gitHubRequest(
+    zipUrl,
+    false,
+    true
+  );
+
+  artifactHeaders.forEach((value, key) => {
+    if (allowedHeaders.includes(key)) {
+      headers[key] = value;
     }
-  }
-  return new Response(artifact.body, { headers });
+  });
+  return new Response(artifactZip, { headers });
 };
 
 const validateRequest = (requestParams: URLSearchParams) => {
@@ -126,7 +136,6 @@ const validateRequest = (requestParams: URLSearchParams) => {
       },
     ];
     for (const allowedInput of allowedInputs) {
-      console.log(allowedInput);
       if (
         !(
           requestParams.get("org") === allowedInput.org &&
@@ -157,7 +166,7 @@ export async function GET(request: NextRequest) {
       artifactName: requestParams.get("artifact") || "",
     });
   } catch (error: any) {
-    return new Response("error", { status: 400 });
+    return new Response(error, { status: 400 });
   }
 }
 
