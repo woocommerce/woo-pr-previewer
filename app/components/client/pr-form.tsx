@@ -34,8 +34,8 @@ export const PrForm = ({
   const [submitResponse, setSubmitResponse] = useState<
     PrSubmitResponse | undefined
   >();
-  const host = window.location.origin;
   const onSubmit = async (event: React.FormEvent) => {
+    const host = window.location.origin;
     event.preventDefault();
     setIsSubmitting(true);
     event.persist;
